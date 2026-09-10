@@ -1,34 +1,34 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require("@playwright/test");
 
 function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-test('selecting an alternative updates summary, timeline, and map focus', async ({ page }) => {
-  await page.goto('/');
+test("selecting an alternative updates summary, timeline, and map focus", async ({ page }) => {
+  await page.goto("/");
 
-  const submitButton = page.locator('#submit-btn');
+  const submitButton = page.locator("#submit-btn");
   await expect(submitButton).toBeVisible();
-  await expect(page.locator('input[name=\"arrivalTime\"]')).not.toHaveValue('');
-  await expect(page.locator('input[name=\"departureTime\"]')).not.toHaveValue('');
+  await expect(page.locator('input[name=\"arrivalTime\"]')).not.toHaveValue("");
+  await expect(page.locator('input[name=\"departureTime\"]')).not.toHaveValue("");
 
-  const trustCheckbox = page.getByRole('checkbox', {
-    name: /i understand this tool gives guidance only/i,
+  const trustCheckbox = page.getByRole("checkbox", {
+    name: /i understand this is guidance only/i,
   });
   await trustCheckbox.check();
 
   await submitButton.click();
 
-  const candidateCards = page.locator('.candidate-list .candidate-item');
+  const candidateCards = page.locator(".three-options-grid .option-card");
   await expect(candidateCards.first()).toBeVisible();
   expect(await candidateCards.count()).toBeGreaterThanOrEqual(2);
 
   const selectionInfo = await page.evaluate(() => {
-    const cards = Array.from(document.querySelectorAll('.candidate-list .candidate-item'));
-    const activeIndex = cards.findIndex((card) => card.classList.contains('active'));
+    const cards = Array.from(document.querySelectorAll(".three-options-grid .option-card"));
+    const activeIndex = cards.findIndex((card) => card.classList.contains("active"));
     const targetIndex = cards.findIndex((_, index) => index !== activeIndex);
     const targetCard = cards[targetIndex];
-    const titleNode = targetCard?.querySelector('.candidate-title');
+    const titleNode = targetCard?.querySelector(".option-card-title");
 
     return {
       activeIndex,
@@ -43,23 +43,23 @@ test('selecting an alternative updates summary, timeline, and map focus', async 
   const targetName = selectionInfo.targetName;
   await candidateCards.nth(selectionInfo.targetIndex).click();
 
-  await expect(page.locator('.summary-card h2').first()).toContainText(targetName, {
+  await expect(page.locator(".summary-card h2").first()).toContainText(targetName, {
     timeout: 45_000,
   });
 
-  await page.getByRole('tab', { name: /^Timeline/ }).click();
-  const timelinePanel = page.locator('.tab-panel.active .timeline');
+  await page.getByRole("tab", { name: /^Timeline/ }).click();
+  const timelinePanel = page.locator(".tab-panel.active .timeline");
   await expect(timelinePanel).toBeVisible();
-  await expect(timelinePanel).toContainText(new RegExp(escapeRegExp(targetName), 'i'), {
+  await expect(timelinePanel).toContainText(new RegExp(escapeRegExp(targetName), "i"), {
     timeout: 45_000,
   });
 
-  await page.getByRole('tab', { name: /^Map$/ }).click();
-  const mapContainer = page.locator('.tab-panel.active .map-container').first();
+  await page.getByRole("tab", { name: /^Map$/ }).click();
+  const mapContainer = page.locator(".tab-panel.active .map-container").first();
   await expect(mapContainer).toBeVisible();
   await expect(mapContainer).toHaveAttribute(
-    'data-focus-candidate',
-    new RegExp(`^${escapeRegExp(targetName)}$`, 'i'),
+    "data-focus-candidate",
+    new RegExp(`^${escapeRegExp(targetName)}$`, "i"),
     { timeout: 45_000 }
   );
 });

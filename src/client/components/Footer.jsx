@@ -7,7 +7,7 @@ export default function Footer() {
         <p>LayoverPlus &copy; 2026</p>
         <div className="footer-links">
           <a
-            href="https://github.com/calebponce/Capstone-Project-CSC-603"
+            href="https://github.com/calebponce/Layover-Plus"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -18,7 +18,10 @@ export default function Footer() {
           </span>
         </div>
       </div>
-      <p className="footer-note">Launch prototype for layover intelligence workflows. Not production flight operations guidance.</p>
+      <p className="footer-note">
+        Launch prototype for layover intelligence workflows. Not production flight operations
+        guidance.
+      </p>
     </footer>
   );
 }

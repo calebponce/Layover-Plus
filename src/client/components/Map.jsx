@@ -1,4 +1,6 @@
 import React, { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 function normalizeName(value) {
   return String(value || "")
@@ -25,17 +27,20 @@ export default function Map({
 
   useEffect(() => {
     // Initialize map on first render
-    if (!mapInstanceRef.current && mapRef.current && window.L) {
-      mapInstanceRef.current = window.L.map(mapRef.current, { zoomControl: false }).setView([39.5, -98.35], 4);
-      
-      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19
+    if (!mapInstanceRef.current && mapRef.current) {
+      mapInstanceRef.current = L.map(mapRef.current, { zoomControl: false }).setView(
+        [39.5, -98.35],
+        4
+      );
+
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
+        subdomains: "abcd",
+        maxZoom: 19,
       }).addTo(mapInstanceRef.current);
 
-      layerGroupRef.current = window.L.layerGroup().addTo(mapInstanceRef.current);
-      window.L.control.zoom({ position: "bottomright" }).addTo(mapInstanceRef.current);
+      layerGroupRef.current = L.layerGroup().addTo(mapInstanceRef.current);
+      L.control.zoom({ position: "bottomright" }).addTo(mapInstanceRef.current);
     }
 
     // Cleanup on unmount
@@ -68,9 +73,8 @@ export default function Map({
 
   // Update map when currentPlan changes
   useEffect(() => {
-    if (mapInstanceRef.current && layerGroupRef.current && currentPlan && currentPlan.map && window.L) {
+    if (mapInstanceRef.current && layerGroupRef.current && currentPlan && currentPlan.map) {
       const { airport, candidates, selectedPoi } = currentPlan.map;
-      const L = window.L;
       const highlightedByCoordinates =
         Number.isFinite(highlightCandidate?.lat) && Number.isFinite(highlightCandidate?.lon)
           ? (candidates || []).find(
@@ -94,7 +98,7 @@ export default function Map({
           : null) ||
         selectedPoi ||
         null;
-      
+
       layerGroupRef.current.clearLayers();
       const points = [];
 
@@ -107,14 +111,19 @@ export default function Map({
       }
 
       // Candidate Markers
-      (candidates || []).forEach(cand => {
+      (candidates || []).forEach((cand) => {
         const isFocused = cand.name === focusPoi?.name;
         const marker = L.circleMarker([cand.lat, cand.lon], {
           radius: isFocused ? 9 : 7,
-          color: cand.riskLabel === "Low" ? "#166534" : cand.riskLabel === "Medium" ? "#a16207" : "#b91c1c",
+          color:
+            cand.riskLabel === "Low"
+              ? "#166534"
+              : cand.riskLabel === "Medium"
+                ? "#a16207"
+                : "#b91c1c",
           fillColor: isFocused ? "#14b8a6" : undefined,
           weight: isFocused ? 2.5 : 1.5,
-          fillOpacity: isFocused ? 0.95 : 0.8
+          fillOpacity: isFocused ? 0.95 : 0.8,
         }).bindPopup(
           `<strong>${cand.name}</strong><br />Score: ${cand.score || 0}/100<br />Risk: ${
             cand.riskLabel || "Unknown"
@@ -126,12 +135,13 @@ export default function Map({
 
       const selectedMissingFromList =
         focusPoi &&
-        !(candidates || []).some((candidate) =>
-          (normalizeName(candidate?.name) === normalizeName(focusPoi?.name) &&
-            Math.abs(candidate.lat - focusPoi.lat) <= 0.0005 &&
-            Math.abs(candidate.lon - focusPoi.lon) <= 0.0005) ||
-          (Math.abs(candidate.lat - focusPoi.lat) <= 0.0005 &&
-            Math.abs(candidate.lon - focusPoi.lon) <= 0.0005)
+        !(candidates || []).some(
+          (candidate) =>
+            (normalizeName(candidate?.name) === normalizeName(focusPoi?.name) &&
+              Math.abs(candidate.lat - focusPoi.lat) <= 0.0005 &&
+              Math.abs(candidate.lon - focusPoi.lon) <= 0.0005) ||
+            (Math.abs(candidate.lat - focusPoi.lat) <= 0.0005 &&
+              Math.abs(candidate.lon - focusPoi.lon) <= 0.0005)
         );
       if (selectedMissingFromList) {
         L.circleMarker([focusPoi.lat, focusPoi.lon], {
@@ -141,20 +151,24 @@ export default function Map({
           weight: 2.5,
           fillOpacity: 0.95,
         })
-          .bindPopup(
-            `<strong>${focusPoi.name}</strong><br />Selected destination`
-          )
+          .bindPopup(`<strong>${focusPoi.name}</strong><br />Selected destination`)
           .addTo(layerGroupRef.current);
         points.push([focusPoi.lat, focusPoi.lon]);
       }
 
       // Selected POI Route
       if (focusPoi && airport) {
-        L.polyline([[airport.lat, airport.lon], [focusPoi.lat, focusPoi.lon]], {
-          color: "#146b61",
-          weight: 4,
-          dashArray: "10 7"
-        }).addTo(layerGroupRef.current);
+        L.polyline(
+          [
+            [airport.lat, airport.lon],
+            [focusPoi.lat, focusPoi.lon],
+          ],
+          {
+            color: "#146b61",
+            weight: 4,
+            dashArray: "10 7",
+          }
+        ).addTo(layerGroupRef.current);
       }
 
       const routePoints = [];

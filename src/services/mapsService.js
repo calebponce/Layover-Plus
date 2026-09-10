@@ -8,6 +8,7 @@ const runtimeStats = {
   cacheMisses: 0,
   requestRetries: 0,
   requestFailures: 0,
+  curatedFallbackUses: 0,
 };
 
 const cacheStore = new Map();
@@ -93,6 +94,16 @@ async function fetchJson(
 }
 
 async function getRouteEstimateMinutes(origin, destination, mode = "driving") {
+  if (process.env.LAYOVERPLUS_POI_MODE === "curated") {
+    const distanceKm = haversineDistanceKm(
+      origin.lat,
+      origin.lon,
+      destination.lat,
+      destination.lon
+    );
+    return conservativeDriveMinutes(distanceKm);
+  }
+
   const profile = mode === "walking" ? "walking" : "driving";
   const routeUrl = `https://router.project-osrm.org/route/v1/${profile}/${origin.lon},${origin.lat};${destination.lon},${destination.lat}?overview=false`;
   const routeCacheKey = [
@@ -105,13 +116,17 @@ async function getRouteEstimateMinutes(origin, destination, mode = "driving") {
   ].join(":");
 
   try {
-    const data = await fetchJson(routeUrl, {
-      headers: { "User-Agent": "LayoverPlus/1.0" },
-    }, {
-      cacheKey: routeCacheKey,
-      cacheTtlMs: ROUTE_CACHE_TTL_MS,
-      retries: 2,
-    });
+    const data = await fetchJson(
+      routeUrl,
+      {
+        headers: { "User-Agent": "LayoverPlus/1.0" },
+      },
+      {
+        cacheKey: routeCacheKey,
+        cacheTtlMs: ROUTE_CACHE_TTL_MS,
+        retries: 2,
+      }
+    );
 
     const seconds = data.routes?.[0]?.duration;
     if (!seconds) {
@@ -120,7 +135,12 @@ async function getRouteEstimateMinutes(origin, destination, mode = "driving") {
 
     return Math.max(1, Math.round(seconds / 60));
   } catch (_error) {
-    const distanceKm = haversineDistanceKm(origin.lat, origin.lon, destination.lat, destination.lon);
+    const distanceKm = haversineDistanceKm(
+      origin.lat,
+      origin.lon,
+      destination.lat,
+      destination.lon
+    );
     return conservativeDriveMinutes(distanceKm);
   }
 }
@@ -160,13 +180,7 @@ function pickCategory(tags) {
 
 function nameOf(element) {
   const tags = element?.tags || {};
-  return (
-    tags.name ||
-    tags["name:en"] ||
-    tags["official_name"] ||
-    tags["loc_name"] ||
-    null
-  );
+  return tags.name || tags["name:en"] || tags["official_name"] || tags["loc_name"] || null;
 }
 
 // Categories that ARE the destination on their own (a real beach is interesting
@@ -225,7 +239,8 @@ function scoreNotability(tags, category) {
   // Tourism/historic tags that imply destination intent
   if (tags.tourism === "attraction") score += 2;
   if (tags.tourism === "museum" || tags.tourism === "gallery") score += 3;
-  if (tags.tourism === "theme_park" || tags.tourism === "zoo" || tags.tourism === "aquarium") score += 3;
+  if (tags.tourism === "theme_park" || tags.tourism === "zoo" || tags.tourism === "aquarium")
+    score += 3;
   if (tags.historic && tags.historic !== "no") score += 1;
 
   // National/state designation usually means somewhere worth visiting
@@ -244,9 +259,29 @@ function scoreNotability(tags, category) {
   return score;
 }
 
+function getCuratedPois({ airport, selectors }) {
+  const fallbackPois = Array.isArray(airport?.fallbackPois) ? airport.fallbackPois : [];
+  if (fallbackPois.length === 0) {
+    return [];
+  }
+
+  const requestedCategories = new Set(
+    (selectors || []).map((selector) => String(selector?.value || "").trim()).filter(Boolean)
+  );
+  const matchingPois = fallbackPois.filter((poi) => requestedCategories.has(poi.category));
+  const selectedPois = matchingPois.length > 0 ? matchingPois : fallbackPois;
+
+  runtimeStats.curatedFallbackUses += 1;
+  return cloneJson(selectedPois);
+}
+
 async function fetchPois({ airport, selectors }) {
   if (!Array.isArray(selectors) || selectors.length === 0) {
     return [];
+  }
+
+  if (process.env.LAYOVERPLUS_POI_MODE === "curated") {
+    return getCuratedPois({ airport, selectors });
   }
 
   const cacheKey = `pois:v3:${airport.code}:${selectorKey(selectors)}`;
@@ -261,23 +296,28 @@ async function fetchPois({ airport, selectors }) {
     .replaceAll("LAT", String(airport.lat))
     .replaceAll("LON", String(airport.lon));
 
-  const data = await fetchJson(
-    "https://overpass-api.de/api/interpreter",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=UTF-8",
-        "User-Agent": "LayoverPlus/1.0",
+  let data;
+  try {
+    data = await fetchJson(
+      "https://overpass-api.de/api/interpreter",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=UTF-8",
+          "User-Agent": "LayoverPlus/1.0",
+        },
+        body: query,
       },
-      body: query,
-    },
-    {
-      cacheKey,
-      cacheTtlMs: POI_CACHE_TTL_MS,
-      retries: 2,
-      retryDelayMs: 320,
-    }
-  );
+      {
+        cacheKey,
+        cacheTtlMs: POI_CACHE_TTL_MS,
+        retries: 2,
+        retryDelayMs: 320,
+      }
+    );
+  } catch (_error) {
+    return getCuratedPois({ airport, selectors });
+  }
 
   const byNameLoc = new Map();
 
@@ -318,18 +358,17 @@ async function fetchPois({ airport, selectors }) {
       hasWebsite: Boolean(tags.website),
       hasHours: Boolean(tags.opening_hours),
       isHeritage: Boolean(tags.heritage),
-      address: [
-        tags["addr:housenumber"],
-        tags["addr:street"],
-        tags["addr:city"],
-      ]
+      address: [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"]]
         .filter(Boolean)
         .join(" "),
     });
   }
 
   // Sort by notability descending so itineraryService keeps the best 20.
-  return Array.from(byNameLoc.values()).sort((a, b) => (b.notability || 0) - (a.notability || 0));
+  const pois = Array.from(byNameLoc.values()).sort(
+    (a, b) => (b.notability || 0) - (a.notability || 0)
+  );
+  return pois.length > 0 ? pois : getCuratedPois({ airport, selectors });
 }
 
 function getMapsRuntimeStats() {
@@ -346,6 +385,7 @@ function getMapsRuntimeStats() {
     cacheMisses: runtimeStats.cacheMisses,
     requestRetries: runtimeStats.requestRetries,
     requestFailures: runtimeStats.requestFailures,
+    curatedFallbackUses: runtimeStats.curatedFallbackUses,
   };
 }
 

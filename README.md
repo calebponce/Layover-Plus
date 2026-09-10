@@ -1,257 +1,144 @@
-# ✈️ LayoverPlus
+# LayoverPlus
 
-**Risk-Aware AI Micro-Itineraries for Airport Layovers**
-Turn your layover into a safe, time-bounded mini adventure.
+[![Reliability CI](https://github.com/calebponce/Layover-Plus/actions/workflows/reliability-ci.yml/badge.svg)](https://github.com/calebponce/Layover-Plus/actions/workflows/reliability-ci.yml)
 
----
+Risk-aware micro-itineraries for airport layovers, built with React, Express, Gemini, OpenStreetMap, and Playwright.
 
-## 👥 Team
+LayoverPlus answers a deceptively difficult travel question: **is there enough time to leave the airport, enjoy one nearby stop, and return without gambling on the next flight?** It turns flight timing, airport-specific buffers, traveler risk tolerance, routing estimates, and nearby places into a timestamped plan with an explainable go/no-go recommendation.
 
-| Name                         | Role          | Email                                                       |
-| ---------------------------- | ------------- | ----------------------------------------------------------- |
-| Caleb Ponce                  | AI & Backend  | [cponce8@sfsu.edu](mailto:cponce8@sfsu.edu)                 |
-| Edson Sanchez Bernal         | Frontend & UX | [esancheezbernal@sfsu.edu](mailto:esancheezbernal@sfsu.edu) |
-| Omshree Rajanikant Bharodiya | Data & Logic  | [obharodiya@sfsu.edu](mailto:obharodiya@sfsu.edu)           |
+> Portfolio status: functional full-stack prototype with deterministic safety logic, graceful third-party fallbacks, contract tests, browser-level interaction coverage, and automated CI. It is not production flight-operations guidance.
 
----
+## Product preview
 
-## 📌 Overview
+| Ranked, explainable destinations                                                         | Synchronized selected route                                                  |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ![LayoverPlus ranked destination recommendations](docs/screenshots/layover-overview.png) | ![LayoverPlus selected plan and route map](docs/screenshots/layover-map.png) |
 
-**LayoverPlus** is a web application that helps travelers with **2–8 hour layovers** make the most of their time by generating **AI-powered micro-itineraries**.
+## Why this project stands out
 
-Instead of waiting in the terminal, users receive a **personalized, timestamped plan** with a clear **risk label**, enabling them to explore nearby food, culture, or sightseeing spots confidently—without missing their next flight.
+- **Safety logic stays deterministic.** Gemini can rank candidates and improve wording, but it cannot override processing time, return buffers, feasibility math, or risk labels.
+- **The product degrades gracefully.** If Gemini is unavailable, the API returns deterministic narrative guidance. If live POI or route services fail, curated destinations and conservative distance estimates keep the planning flow usable.
+- **Choices remain synchronized.** Selecting another destination replans the recommendation, timeline, and map as one state transition; Playwright verifies that behavior end to end.
+- **The API exposes its reasoning.** Responses include score components, effective buffers, selection source, AI metadata, latency, and map-service runtime counters.
+- **The service includes practical guardrails.** Zod validation, Helmet, rate limiting, JWT authentication, password hashing, bounded in-memory stores, retries, and caches cover the prototype's main failure modes.
 
----
+## Product flow
 
-## 🧩 Problem
+1. Enter the airport and layover window.
+2. Select connection type, interests, and risk tolerance.
+3. Review three ranked destinations and the timing tradeoffs for each.
+4. Apply a destination to update the recommendation, timestamped itinerary, and route map.
+5. Optionally use Gemini and place-provider keys for richer ranking, language, photos, ratings, and reviews.
 
-Travelers often remain in the airport during layovers because they cannot reliably determine whether leaving the airport is safe.
+Supported airports: `SFO`, `LAX`, and `JFK`.
 
-* Existing travel planners focus on **full trips**
-* Airport apps focus only on **terminal navigation**
+## Architecture
 
-👉 This leaves a gap for **realistic, time-bounded off-airport experiences**
+| Layer                         | Responsibility                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| React + Vite PWA              | Planner form, candidate comparison, itinerary timeline, map, auth views, and saved-plan experience                       |
+| Express API                   | Validation, auth, planning orchestration, telemetry, feedback, and place-preview proxying                                |
+| Deterministic planning engine | Airport processing assumptions, return buffers, travel limits, dwell time, feasibility, scoring, and risk classification |
+| Gemini                        | Optional candidate ranking, grounded explanations, itinerary wording, and traveler tips                                  |
+| Overpass + OSRM               | Live nearby-place discovery and route estimates, protected by retry, cache, and fallback behavior                        |
+| Playwright                    | API contracts plus the browser-level destination choice synchronization test                                             |
 
-### ✅ LayoverPlus solves this by:
+The backend computes a safe structured plan first. AI receives only that constrained context and may explain or rank it; it does not invent timing values.
 
-* Estimating **immigration and security processing times**
-* Computing **travel time to nearby points of interest (POIs)**
-* Enforcing a **configurable return safety buffer**
-* Generating a **narrative itinerary grounded in real constraints**
+## Tech stack
 
----
+- React 19, React Router, Vite, Framer Motion, Leaflet, and PWA support
+- Node.js 20.19+ and Express
+- Gemini Generative Language API
+- OpenStreetMap Overpass and OSRM
+- Zod, Helmet, express-rate-limit, JWT, bcrypt, and Pino
+- Playwright contract and end-to-end tests
+- GitHub Actions CI
 
-## 🏗️ Tech Stack
+## Run locally
 
-### Frontend
-
-* React + Vite
-* React Router
-* Framer Motion
-* Leaflet map UI
-
-### Backend
-
-* Node.js + Express
-* Time calculations & feasibility logic
-
-### AI Component
-
-* OpenAI Responses API integration
-* Generates itinerary wording, explanations, and traveler tips from structured data
-* Deterministic backend logic still owns safety constraints, travel-time estimates, and risk scoring
-
-### Data Sources
-
-* Static airport metadata
-* OSRM routing estimates
-* OpenStreetMap Overpass POI search
-
----
-
-## ✨ Features
-
-* Input fields for **airport, arrival time, departure time, connection type, and interests**
-* Required **trust acknowledgment** before plan generation
-* Adjustable **risk profiles** (`conservative`, `balanced`, `explorer`)
-* Clickable **strategy packs** to bias itinerary style
-* Airport-specific **processing assumptions and safety buffers**
-* **Feasibility scoring** with `Low`, `Medium`, and `High` risk labels
-* Nearby POI search using **OpenStreetMap Overpass**
-* Travel time estimation via **OSRM routing**
-* Retry + cache guardrails for route/POI data calls
-* Structured **timestamped itinerary blocks**
-* AI-generated **narrative summaries**
-* Interactive **map view using Leaflet**
-* Simulated **flight pulse** with delay / gate / boarding signals
-* **Auto-replan history** and optional auto-replan trigger loop
-* In-app **action center** (airport map, ride estimate, share summary)
-* Optional **place preview + live review snippets** for the active stop
-* In-app **feedback submission** and product event telemetry endpoints
-
----
-
-## 📖 Usage
-
-1. Enter your **arrival airport, arrival time, and next flight departure time**
-2. Select your **connection type** (domestic / international)
-3. Choose your **interests** (food, culture, sightseeing, shopping)
-4. Choose your **risk profile** and **strategy pack**
-5. Confirm the guidance acknowledgment checkbox
-6. Receive:
-
-   * Risk label
-   * Timestamped itinerary
-   * Map visualization
-
----
-
-## 📌 Supported Airports
-
-* `LAX` — Los Angeles International Airport
-* `SFO` — San Francisco International Airport
-* `JFK` — John F. Kennedy International Airport
-
----
-
-## 🚀 Run the Project
+Requirements: Node.js 20.19 or newer.
 
 ```bash
-# Install dependencies
-npm install
+git clone https://github.com/calebponce/Layover-Plus.git
+cd Layover-Plus
+npm ci
 ```
 
-### Local Development
-
-Run backend and frontend in separate terminals:
+For local development, run the API and frontend in separate terminals:
 
 ```bash
-# Terminal 1 (API server)
 npm run dev:server
+```
 
-# Terminal 2 (Vite frontend)
+```bash
 npm run dev:client
 ```
 
-Open:
-- Frontend: `http://localhost:5173`
-- API server: `http://localhost:3000`
-
-### Production-style Run
+Open `http://localhost:5173`. For a production-style local run:
 
 ```bash
-# Build frontend assets
 npm run build
-
-# Serve built frontend + API from Express
 npm start
 ```
 
-### Enable AI Generation
+The application works without paid API credentials. To enable optional integrations, copy `.env.example` to `.env` and add the keys you want:
 
-Create a local `.env` file in the project root:
-
-```bash
-GEMINI_API_KEY=your_api_key_here
+```dotenv
+GEMINI_API_KEY=your_key
 GEMINI_MODEL=gemini-2.0-flash
-# Optional: enables live place ratings/reviews in Place Preview panel
-GOOGLE_PLACES_API_KEY=your_google_places_key_here
-# Optional: enables Yelp listing links, ratings, and review snippets
-YELP_API_KEY=your_yelp_fusion_key_here
+GOOGLE_PLACES_API_KEY=your_optional_key
+YELP_API_KEY=your_optional_key
 ```
 
-Get a free Gemini API key at https://aistudio.google.com/apikey. Then restart the server:
+## Test and verify
 
 ```bash
-npm start
+npm run build
+npm run test:contract
+npm run test:e2e
+npm audit --omit=dev
 ```
 
-Without `GEMINI_API_KEY`, the app still works but uses fallback wording instead of AI-generated schedule text.
+CI runs clean installs, a production build, the production dependency audit, API contract tests, and the end-to-end choice synchronization scenario. Browser tests force the curated POI mode so their result does not depend on live third-party availability.
 
----
+## API surface
 
-## 📌 API Endpoints
+| Endpoint                  | Purpose                                                   |
+| ------------------------- | --------------------------------------------------------- |
+| `GET /api/health`         | Health and API metadata                                   |
+| `GET /api/config`         | Supported airports, interests, and options                |
+| `POST /api/plan`          | Generate or replan a risk-aware itinerary                 |
+| `POST /api/flight-status` | Simulate gate, delay, and replan signals                  |
+| `GET /api/place-preview`  | Fetch normalized place details and provider links         |
+| `GET /api/place-photo`    | Proxy Google Place photos without exposing the server key |
+| `POST /api/feedback`      | Record a plan rating and comment                          |
+| `POST /api/event`         | Accept best-effort product telemetry                      |
+| `GET /api/usage`          | Return request and planning performance counters          |
+| `GET /api/replan-history` | Return recent replan events for a session                 |
 
-### GET /api/health
+See [the API structure](docs/api-structure.md) for request, response, and error examples.
 
-Returns service health and API metadata used by the frontend connection checker.
+## Ownership and attribution
 
-### GET /api/config
+LayoverPlus began as a three-person San Francisco State University project. The original ownership areas were:
 
-Returns configuration and supported options.
+| Contributor                                  | Primary area            |
+| -------------------------------------------- | ----------------------- |
+| [Caleb Ponce](https://github.com/calebponce) | AI and backend          |
+| Edson Sanchez Bernal                         | Frontend and UX         |
+| Omshree Rajanikant Bharodiya                 | Data and planning logic |
 
-### GET /api/usage
+The repository preserves the full team history and names instead of presenting collaborative work as a solo project. Cross-cutting integration was collaborative.
 
-Returns API usage counters and recent `/api/plan` performance snapshot.
+## Current limitations
 
-### POST /api/event
+- Airport timing assumptions are configurable estimates, not live operational guarantees.
+- Flight status is simulated; a production version should integrate an authoritative provider.
+- In-memory auth, telemetry, and saved data are prototype storage and reset on restart.
+- Only three airports have curated configuration today.
+- Live provider quality and quotas vary, so fallbacks intentionally favor continuity over freshness.
 
-Best-effort product telemetry ingestion for frontend interaction events.
+## License
 
-### POST /api/feedback
-
-Captures a 1–5 plan rating and optional comment.
-
-### GET /api/place-preview
-
-Returns place preview metadata for a selected POI (rating, map links, and live review snippets when Google Places key is configured).
-
-### GET /api/place-photo
-
-Secure proxy endpoint for Google Place photos used by the frontend preview cards. This keeps API keys on the server.
-
-### POST /api/flight-status
-
-Returns simulated flight context (gate, delay, status, replan trigger hints) for the active request.
-
-### GET /api/replan-history
-
-Returns recent replan signals for a session key.
-
-### POST /api/plan
-
-Generates a layover itinerary.
-
-#### Example Request Payload:
-
-```json
-{
-  "airportCode": "SFO",
-  "arrivalTime": "2026-04-14T14:30",
-  "departureTime": "2026-04-14T20:30",
-  "connectionType": "domestic",
-  "riskProfile": "balanced",
-  "strategyPack": "standard",
-  "interests": ["food", "culture"],
-  "airlineCode": "AA",
-  "flightNumber": "1234",
-  "trustAcknowledged": true,
-  "sessionKey": "optional-session-key"
-}
-```
-
-Detailed response contracts and error shape:
-👉 [docs/api-structure.md](./docs/api-structure.md)
-
-The plan response also includes AI metadata:
-
-```json
-{
-  "ai": {
-    "provider": "openai",
-    "model": "gpt-4.1-mini",
-    "used": true,
-    "title": "Low-risk SFO food stop",
-    "travelerTips": [],
-    "error": null
-  }
-}
-```
-
----
-
-## 🌟 Project Goal
-
-LayoverPlus aims to transform idle layover time into **safe, efficient, and enjoyable micro-adventures** by combining **AI reasoning, real-world constraints, and user preferences**.
-
----
+Released under the [MIT License](LICENSE).
