@@ -1,14 +1,28 @@
 # LayoverPlus
 
 [![Reliability CI](https://github.com/calebponce/Layover-Plus/actions/workflows/reliability-ci.yml/badge.svg)](https://github.com/calebponce/Layover-Plus/actions/workflows/reliability-ci.yml)
+[![Portfolio Demo](https://github.com/calebponce/Layover-Plus/actions/workflows/portfolio-demo.yml/badge.svg)](https://github.com/calebponce/Layover-Plus/actions/workflows/portfolio-demo.yml)
 
 Risk-aware micro-itineraries for airport layovers, built with React, Express, Gemini, OpenStreetMap, and Playwright.
 
 LayoverPlus answers a deceptively difficult travel question: **is there enough time to leave the airport, enjoy one nearby stop, and return without gambling on the next flight?** It turns flight timing, airport-specific buffers, traveler risk tolerance, routing estimates, and nearby places into a timestamped plan with an explainable go/no-go recommendation.
 
-> Portfolio status: functional full-stack prototype with deterministic safety logic, graceful third-party fallbacks, contract tests, browser-level interaction coverage, and automated CI. It is not production flight-operations guidance.
+> **[Try the live portfolio demo](https://calebponce.github.io/Layover-Plus/)** — no account, API key, or paid service required. The demo uses representative route data and runs the deterministic safety engine entirely in the browser.
 
-## Product preview
+> Portfolio status: functional full-stack prototype with deterministic safety logic, graceful third-party fallbacks, contract tests, browser-level interaction coverage, an interactive recruiter demo, and automated CI. It is not production flight-operations guidance.
+
+## Live portfolio demo
+
+The GitHub Pages experience is a focused, zero-cost version of the product built for quick evaluation. Change the airport, layover duration, connection type, risk tolerance, or ranked destination and the safety call, score, and timestamped itinerary update together.
+
+- A hard feasibility rule prevents a destination from receiving a `GO` result when its required time exceeds the layover.
+- Every recommendation exposes its processing, travel, experience, and protected-return assumptions.
+- A two-hour layover demonstrates the explicit `STAY AIRSIDE` failure state instead of forcing a recommendation.
+- The full React/Express application, authentication flow, provider integrations, and saved-plan experience remain available in this repository.
+
+![LayoverPlus interactive portfolio demo](docs/screenshots/portfolio-demo.png)
+
+## Full application preview
 
 | Ranked, explainable destinations                                                         | Synchronized selected route                                                  |
 | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -95,12 +109,13 @@ YELP_API_KEY=your_optional_key
 
 ```bash
 npm run build
+npm run test:demo
 npm run test:contract
 npm run test:e2e
 npm audit --omit=dev
 ```
 
-CI runs clean installs, a production build, the production dependency audit, API contract tests, and the end-to-end choice synchronization scenario. Browser tests force the curated POI mode so their result does not depend on live third-party availability.
+CI runs clean installs, both planner and API checks, a production build, the production dependency audit, API contract tests, and the end-to-end choice synchronization scenario. Browser tests force the curated POI mode so their result does not depend on live third-party availability. A separate GitHub Pages workflow verifies and deploys the portfolio demo from `main`.
 
 ## API surface
 

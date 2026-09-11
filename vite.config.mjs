@@ -5,6 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || "http://localhost:3000";
 
 export default defineConfig({
+  base: process.env.VITE_BASE_PATH || "/",
   plugins: [
     react(),
     VitePWA({
@@ -17,14 +18,10 @@ export default defineConfig({
         background_color: "#0a0a0a",
         icons: [
           {
-            src: "pwa-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
+            src: "layover-mark.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any maskable",
           },
         ],
       },

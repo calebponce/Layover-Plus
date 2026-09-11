@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LayoverPlus plane mark">
+  <rect width="64" height="64" rx="16" fill="#071019"/>
+  <path d="M13 35h15L43 19c2-2 5-2 7 0s2 5 0 7L38 38h10l4-4h5l-3 9-9 3v-5H34L23 52h-6l5-14h-9z" fill="#65d7ff"/>
+  <circle cx="18" cy="20" r="3" fill="#ffbf69"/>
+</svg>
