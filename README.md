@@ -18,7 +18,7 @@ The GitHub Pages experience is a focused, zero-cost version of the product built
 - A hard feasibility rule prevents a destination from receiving a `GO` result when its required time exceeds the layover.
 - Every recommendation exposes its processing, travel, experience, and protected-return assumptions.
 - A two-hour layover demonstrates the explicit `STAY AIRSIDE` failure state instead of forcing a recommendation.
-- The full React/Express application, authentication flow, provider integrations, and saved-plan experience remain available in this repository.
+- The Pages build isolates the recruiter demo from the full React/Express application, so it ships only the zero-key interactive case study; authentication, provider integrations, and the saved-plan experience remain available in this repository.
 
 ![LayoverPlus interactive portfolio demo](docs/screenshots/portfolio-demo.png)
 
@@ -30,7 +30,7 @@ The GitHub Pages experience is a focused, zero-cost version of the product built
 
 ## Why this project stands out
 
-- **Safety logic stays deterministic.** Gemini can rank candidates and improve wording, but it cannot override processing time, return buffers, feasibility math, or risk labels.
+- **Safety logic stays deterministic.** Gemini can rank candidates and improve wording, but it cannot override processing time, return buffers, feasibility math, or risk labels. Fast boundary tests prove that an exact-fit itinerary is accepted, a one-minute overrun is rejected, and risk labels change only as protected slack increases.
 - **The product degrades gracefully.** If Gemini is unavailable, the API returns deterministic narrative guidance. If live POI or route services fail, curated destinations and conservative distance estimates keep the planning flow usable.
 - **Choices remain synchronized.** Selecting another destination replans the recommendation, timeline, and map as one state transition; Playwright verifies that behavior end to end.
 - **The API exposes its reasoning.** Responses include score components, effective buffers, selection source, AI metadata, latency, and map-service runtime counters.
@@ -109,13 +109,13 @@ YELP_API_KEY=your_optional_key
 
 ```bash
 npm run build
-npm run test:demo
+npm run test:safety
 npm run test:contract
 npm run test:e2e
 npm audit --omit=dev
 ```
 
-CI runs clean installs, both planner and API checks, a production build, the production dependency audit, API contract tests, and the end-to-end choice synchronization scenario. Browser tests force the curated POI mode so their result does not depend on live third-party availability. A separate GitHub Pages workflow verifies and deploys the portfolio demo from `main`.
+CI runs clean installs, deterministic safety-boundary tests, a production build, the production dependency audit, API contract tests, and the end-to-end choice synchronization scenario. Browser tests force the curated POI mode so their result does not depend on live third-party availability. A separate GitHub Pages workflow verifies and deploys the portfolio demo from `main`.
 
 ## API surface
 

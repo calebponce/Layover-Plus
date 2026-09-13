@@ -1,11 +1,19 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import { fileURLToPath, URL } from "node:url";
 
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || "http://localhost:3000";
+const portfolioDemoMode = process.env.VITE_DEMO_MODE === "true";
+const appEntry = portfolioDemoMode ? "./src/client/entry.demo.jsx" : "./src/client/entry.app.jsx";
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
+  resolve: {
+    alias: {
+      "@app-entry": fileURLToPath(new URL(appEntry, import.meta.url)),
+    },
+  },
   plugins: [
     react(),
     VitePWA({

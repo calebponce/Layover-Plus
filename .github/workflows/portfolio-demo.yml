@@ -39,8 +39,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify demo planner
-        run: npm run test:demo
+      - name: Verify deterministic safety engine
+        run: npm run test:safety
 
       - name: Build portfolio demo
         env:
