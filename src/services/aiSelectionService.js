@@ -158,8 +158,11 @@ async function generateAiSelection({
     return result;
   }
 
-  if (!Array.isArray(candidates) || candidates.length === 0) {
-    return emptyResult({ error: "No candidates to choose from." });
+  const feasibleCandidates = Array.isArray(candidates)
+    ? candidates.filter((candidate) => candidate?.feasibility?.feasible === true)
+    : [];
+  if (feasibleCandidates.length === 0) {
+    return emptyResult({ error: "No feasible candidates for AI selection." });
   }
 
   try {
@@ -183,7 +186,7 @@ async function generateAiSelection({
                     riskProfile,
                     feasibility,
                     summary,
-                    candidates,
+                    candidates: feasibleCandidates,
                   }),
                 },
               ],
@@ -206,7 +209,7 @@ async function generateAiSelection({
     const parsed = parseJsonResponse(extractGeminiText(data));
     const latencyMs = Date.now() - startedAt;
 
-    const candidateNames = new Set(candidates.map((c) => c.poi.name));
+    const candidateNames = new Set(feasibleCandidates.map((c) => c.poi.name));
     const pickedCandidateName =
       typeof parsed.pickedCandidateName === "string" && candidateNames.has(parsed.pickedCandidateName.trim())
         ? parsed.pickedCandidateName.trim()

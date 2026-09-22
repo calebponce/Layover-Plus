@@ -664,7 +664,9 @@ async function buildLayoverPlan({
 
   const aiPickedOption = aiSelection.pickedCandidateName
     ? riskTieredOptions.find(
-        (item) => normalizePoiName(item.poi.name) === normalizePoiName(aiSelection.pickedCandidateName)
+        (item) =>
+          item.feasibility.feasible &&
+          normalizePoiName(item.poi.name) === normalizePoiName(aiSelection.pickedCandidateName)
       ) || null
     : null;
   if (aiSelection.pickedCandidateName && !aiPickedOption) {

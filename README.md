@@ -30,7 +30,7 @@ The GitHub Pages experience is a focused, zero-cost version of the product built
 
 ## Why this project stands out
 
-- **Safety logic stays deterministic.** Gemini can rank candidates and improve wording, but it cannot override processing time, return buffers, feasibility math, or risk labels. Fast boundary tests prove that an exact-fit itinerary is accepted, a one-minute overrun is rejected, and risk labels change only as protected slack increases.
+- **Safety logic stays deterministic.** Gemini can rank feasible candidates and improve wording, but it cannot override processing time, return buffers, feasibility math, or risk labels. Fast boundary tests prove that an exact-fit itinerary is accepted, a one-minute overrun is rejected, and risk labels change only as protected slack increases. Mocked-provider tests cover infeasible picks, malformed responses, and unsupported numeric or categorical safety claims; generated prose is not a substitute for verifying real-world conditions.
 - **The product degrades gracefully.** If Gemini is unavailable, the API returns deterministic narrative guidance. If live POI or route services fail, curated destinations and conservative distance estimates keep the planning flow usable.
 - **Choices remain synchronized.** Selecting another destination replans the recommendation, timeline, and map as one state transition; Playwright verifies that behavior end to end.
 - **The API exposes its reasoning.** Responses include score components, effective buffers, selection source, AI metadata, latency, and map-service runtime counters.
@@ -53,11 +53,11 @@ Supported airports: `SFO`, `LAX`, and `JFK`.
 | React + Vite PWA              | Planner form, candidate comparison, itinerary timeline, map, auth views, and saved-plan experience                       |
 | Express API                   | Validation, auth, planning orchestration, telemetry, feedback, and place-preview proxying                                |
 | Deterministic planning engine | Airport processing assumptions, return buffers, travel limits, dwell time, feasibility, scoring, and risk classification |
-| Gemini                        | Optional candidate ranking, grounded explanations, itinerary wording, and traveler tips                                  |
+| Gemini                        | Optional feasible-candidate ranking, constrained itinerary wording, and traveler tips; prose still requires judgment     |
 | Overpass + OSRM               | Live nearby-place discovery and route estimates, protected by retry, cache, and fallback behavior                        |
 | Playwright                    | API contracts plus the browser-level destination choice synchronization test                                             |
 
-The backend computes a safe structured plan first. AI receives only that constrained context and may explain or rank it; it does not invent timing values.
+The backend computes a structured feasibility result first. AI receives constrained context and may explain or rank feasible stops, but its output is not permitted to change the schedule or timing values. The numeric and safety-phrase checks are bounded safeguards, not a guarantee that every sentence is factually correct or that real-world travel is safe.
 
 ## Tech stack
 

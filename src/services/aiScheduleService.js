@@ -1,4 +1,5 @@
 const logger = require("../utils/logger");
+const { generatedCopyIsGrounded } = require("./aiResponseGuard");
 
 const DEFAULT_MODEL = "gemini-2.0-flash";
 
@@ -146,27 +147,6 @@ function parseJsonResponse(text) {
   }
 }
 
-function normalizeSchedule(baseSchedule, aiSchedule) {
-  if (!Array.isArray(aiSchedule)) {
-    return baseSchedule;
-  }
-
-  return baseSchedule.map((baseItem, index) => {
-    const aiItem = aiSchedule[index] || {};
-    return {
-      ...baseItem,
-      label:
-        typeof aiItem.label === "string" && aiItem.label.trim()
-          ? aiItem.label.trim()
-          : baseItem.label,
-      reason:
-        typeof aiItem.reason === "string" && aiItem.reason.trim()
-          ? aiItem.reason.trim()
-          : baseItem.reason,
-    };
-  });
-}
-
 const GENERIC_TIP_PATTERNS = [
   /^keep the return buffer/i,
   /^stay aware/i,
@@ -217,8 +197,8 @@ Generate the traveler-facing parts of a layover itinerary as strict JSON.
 Rules:
 - Use only the structured data below.
 - Do not invent airports, places, travel times, timestamps, safety buffers, or risk labels.
-- Preserve every schedule block's start, end, minutes, and location exactly.
-- You may rewrite only schedule labels, add a reason for each block, write a narrative, write a concise title, and add traveler tips.
+- The schedule is read-only context; do not return or rewrite schedule blocks.
+- You may write a narrative, a concise title, and traveler tips.
 
 Traveler tips requirements (STRICT):
 - Return AT LEAST 5 tips. Aim for 5–7. No more than 8.
@@ -241,12 +221,6 @@ Return only JSON with this exact shape:
 {
   "title": "short title",
   "narrative": "2-4 sentence explanation",
-  "schedule": [
-    {
-      "label": "traveler-facing schedule label",
-      "reason": "why this block matters"
-    }
-  ],
   "travelerTips": ["tip 1", "tip 2", "tip 3", "tip 4", "tip 5"]
 }
 
@@ -289,6 +263,23 @@ async function generateAiSchedule({
     return result;
   }
 
+  // Airside and infeasible plans retain deterministic guidance. The model
+  // cannot talk a traveler into an off-airport trip without a feasible stop.
+  if (!selectedPoi || feasibility?.feasible === false) {
+    return {
+      ...buildFallbackAiPlan({
+        schedule,
+        narrative: fallbackNarrative,
+        airport,
+        selectedPoi,
+        feasibility,
+        summary,
+        connectionType,
+      }),
+      error: "AI wording skipped when no feasible off-airport stop exists.",
+    };
+  }
+
   const payload = {
     airport: {
       code: airport.code,
@@ -329,6 +320,9 @@ async function generateAiSchedule({
     }
 
     const parsed = parseJsonResponse(extractGeminiText(data));
+    if (!generatedCopyIsGrounded(parsed, { summary, feasibility, selectedPoi, schedule })) {
+      throw new Error("AI wording contained an unsupported number or safety claim.");
+    }
     const narrative =
       typeof parsed.narrative === "string" && parsed.narrative.trim()
         ? parsed.narrative.trim()
@@ -345,7 +339,7 @@ async function generateAiSchedule({
           ? parsed.title.trim()
           : null,
       narrative,
-      schedule: normalizeSchedule(schedule, parsed.schedule),
+      schedule,
       travelerTips: normalizeTips(parsed.travelerTips),
       error: null,
     };
