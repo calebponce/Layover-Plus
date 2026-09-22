@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "description": "Synthetic Gemini responses for deterministic boundary checks. No provider calls or travel-safety validation.",
+  "context": {
+    "airport": { "code": "SFO", "name": "San Francisco International", "city": "San Francisco" },
+    "connectionType": "domestic",
+    "interests": ["sightseeing"],
+    "riskProfile": "balanced",
+    "summary": { "layoverMinutes": 300, "processingMinutes": 45, "returnBufferMinutes": 60 },
+    "feasibility": { "feasible": true, "slackMinutes": 95 },
+    "selectedPoi": { "name": "Pier 39", "category": "attraction", "outboundMinutes": 25, "inboundMinutes": 25, "dwellMinutes": 50 },
+    "schedule": [{ "label": "Visit Pier 39", "reason": "Use the available dwell time", "minutes": 50 }],
+    "fallbackNarrative": "Return to SFO before the protected buffer.",
+    "candidates": [
+      { "poi": { "name": "Pier 39", "category": "attraction" }, "feasibility": { "feasible": true, "score": 70, "slackMinutes": 95, "riskLabel": "Low" } },
+      { "poi": { "name": "Impossible Stop", "category": "attraction" }, "feasibility": { "feasible": false, "score": 90, "slackMinutes": -5, "riskLabel": "High" } }
+    ]
+  },
+  "cases": [
+    {
+      "id": "schedule-grounded-copy",
+      "service": "schedule",
+      "response": { "kind": "json", "body": { "title": "Pier 39 stop", "narrative": "Visit Pier 39 and return to SFO.", "travelerTips": ["Spend 50 minutes at Pier 39, then return to SFO."] } },
+      "expect": { "provider": "gemini", "used": true, "scheduleUnchanged": true, "errorIncludes": null }
+    },
+    {
+      "id": "schedule-unsupported-time",
+      "service": "schedule",
+      "response": { "kind": "json", "body": { "narrative": "You have 999 minutes at Pier 39." } },
+      "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "unsupported number" }
+    },
+    {
+      "id": "schedule-categorical-safety-claim",
+      "service": "schedule",
+      "response": { "kind": "json", "body": { "narrative": "Your return is guaranteed." } },
+      "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "safety claim" }
+    },
+    {
+      "id": "schedule-untrusted-schedule-rewrite-ignored",
+      "service": "schedule",
+      "response": { "kind": "json", "body": { "title": "Pier 39 stop", "narrative": "Visit Pier 39 and return to SFO.", "schedule": [{ "label": "Leave whenever", "reason": "The model says so", "minutes": 999 }] } },
+      "expect": { "provider": "gemini", "used": true, "scheduleUnchanged": true, "errorIncludes": null }
+    },
+    {
+      "id": "schedule-malformed-json",
+      "service": "schedule",
+      "response": { "kind": "raw", "body": "not JSON" },
+      "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "JSON" }
+    },
+    {
+      "id": "schedule-provider-error",
+      "service": "schedule",
+      "response": { "kind": "httpError", "status": 503, "message": "provider unavailable" },
+      "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "provider unavailable" }
+    },
+    {
+      "id": "schedule-infeasible-skips-provider",
+      "service": "schedule",
+      "inputOverrides": { "feasibility": { "feasible": false, "slackMinutes": -1 } },
+      "response": { "kind": "mustNotCall" },
+      "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "no feasible" }
+    },
+    {
+      "id": "schedule-airside-skips-provider",
+      "service": "schedule",
+      "inputOverrides": { "selectedPoi": null },
+      "response": { "kind": "mustNotCall" },
+      "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "no feasible" }
+    },
+    {
+      "id": "selection-feasible-pick",
+      "service": "selection",
+      "response": { "kind": "json", "body": { "pickedCandidateName": "Pier 39" } },
+      "expect": { "provider": "gemini", "used": true, "pickedCandidateName": "Pier 39", "errorIncludes": null }
+    },
+    {
+      "id": "selection-infeasible-pick-rejected",
+      "service": "selection",
+      "response": { "kind": "json", "body": { "pickedCandidateName": "Impossible Stop" } },
+      "expect": { "provider": "gemini", "used": true, "pickedCandidateName": null, "errorIncludes": null }
+    },
+    {
+      "id": "selection-invented-pick-rejected",
+      "service": "selection",
+      "response": { "kind": "json", "body": { "pickedCandidateName": "Invented Landmark" } },
+      "expect": { "provider": "gemini", "used": true, "pickedCandidateName": null, "errorIncludes": null }
+    },
+    {
+      "id": "selection-malformed-json",
+      "service": "selection",
+      "response": { "kind": "raw", "body": "not JSON" },
+      "expect": { "provider": "fallback", "used": false, "pickedCandidateName": null, "errorIncludes": "JSON" }
+    },
+    {
+      "id": "selection-provider-error",
+      "service": "selection",
+      "response": { "kind": "httpError", "status": 503, "message": "provider unavailable" },
+      "expect": { "provider": "fallback", "used": false, "pickedCandidateName": null, "errorIncludes": "provider unavailable" }
+    },
+    {
+      "id": "selection-no-feasible-skips-provider",
+      "service": "selection",
+      "inputOverrides": { "candidates": [{ "poi": { "name": "Impossible Stop" }, "feasibility": { "feasible": false, "slackMinutes": -5 } }] },
+      "response": { "kind": "mustNotCall" },
+      "expect": { "provider": "fallback", "used": false, "pickedCandidateName": null, "errorIncludes": "No feasible" }
+    }
+  ]
+}

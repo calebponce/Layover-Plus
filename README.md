@@ -31,6 +31,7 @@ The GitHub Pages experience is a focused, zero-cost version of the product built
 ## Why this project stands out
 
 - **Safety logic stays deterministic.** Gemini can rank feasible candidates and improve wording, but it cannot override processing time, return buffers, feasibility math, or risk labels. Fast boundary tests prove that an exact-fit itinerary is accepted, a one-minute overrun is rejected, and risk labels change only as protected slack increases. Mocked-provider tests cover infeasible picks, malformed responses, and unsupported numeric or categorical safety claims; generated prose is not a substitute for verifying real-world conditions.
+- **The AI boundary has a repeatable offline evaluation set.** Versioned synthetic responses exercise feasible and infeasible picks, schedule tampering, unsupported claims, malformed JSON, and provider failures without an API key. The result is a contract-test outcome, not an estimate of model accuracy or traveler safety; factual prose still needs human review.
 - **The product degrades gracefully.** If Gemini is unavailable, the API returns deterministic narrative guidance. If live POI or route services fail, curated destinations and conservative distance estimates keep the planning flow usable.
 - **Choices remain synchronized.** Selecting another destination replans the recommendation, timeline, and map as one state transition; Playwright verifies that behavior end to end.
 - **The API exposes its reasoning.** Responses include score components, effective buffers, selection source, AI metadata, latency, and map-service runtime counters.
@@ -110,12 +111,15 @@ YELP_API_KEY=your_optional_key
 ```bash
 npm run build
 npm run test:safety
+npm run eval:offline
 npm run test:contract
 npm run test:e2e
 npm audit --omit=dev
 ```
 
-CI runs clean installs, deterministic safety-boundary tests, a production build, the production dependency audit, API contract tests, and the end-to-end choice synchronization scenario. Browser tests force the curated POI mode so their result does not depend on live third-party availability. A separate GitHub Pages workflow verifies and deploys the portfolio demo from `main`.
+CI runs clean installs, deterministic safety-boundary tests, the versioned offline AI-boundary evaluation, a production build, the production dependency audit, API contract tests, and the end-to-end choice synchronization scenario. Browser tests force the curated POI mode so their result does not depend on live third-party availability. A separate GitHub Pages workflow verifies and deploys the portfolio demo from `main`.
+
+The offline corpus is [evals/v1/fixtures.json](evals/v1/fixtures.json). `npm run eval:offline` runs each synthetic provider response through the real selection or schedule service with a mocked `fetch`; it fails if an expected boundary behavior changes. This does **not** call Gemini, measure live-model quality, validate real-time travel estimates, or prove all generated claims are grounded. See the [human-review queue](evals/v1/human-review.md) for claims outside the automated checks.
 
 ## API surface
 

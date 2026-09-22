@@ -37,6 +37,9 @@ jobs:
       - name: Verify deterministic safety engine
         run: npm run test:safety
 
+      - name: Evaluate mocked AI boundary fixtures
+        run: npm run eval:offline
+
       - name: Audit production dependencies
         run: npm audit --omit=dev
 
