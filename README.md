@@ -11,8 +11,6 @@ LayoverPlus answers a deceptively difficult travel question: **is there enough t
 
 > Portfolio status: functional full-stack prototype with deterministic safety logic, graceful third-party fallbacks, contract tests, browser-level interaction coverage, an interactive recruiter demo, and automated CI. It is not production flight-operations guidance.
 
-For an interviewer-friendly explanation, use the [two-minute engineering walkthrough script](docs/engineering-walkthrough.md). It separates the zero-key demo, synthetic guardrail evidence, and still-pending real-output evaluation.
-
 ## Live portfolio demo
 
 The GitHub Pages experience is a focused, zero-cost version of the product built for quick evaluation. Change the airport, layover duration, connection type, risk tolerance, or ranked destination and the safety call, score, and timestamped itinerary update together.
