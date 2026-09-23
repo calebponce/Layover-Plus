@@ -13,7 +13,8 @@
     "test:demo": "node --test src/client/demo/demoPlanner.test.js",
     "test:feasibility": "node --test tests/unit/feasibilityService.test.js",
     "test:safety": "npm run test:demo && npm run test:feasibility && node --test tests/unit/aiGuardrails.test.js",
-    "eval:offline": "node --test tests/eval/offline-eval.test.js",
+    "eval:offline": "node --test tests/eval/*.test.js",
+    "eval:review": "node evals/review/cli.js",
     "test:reliability": "playwright test",
     "test:contract": "playwright test --project=api tests/contract",
     "test:e2e": "playwright test --project=chromium tests/e2e"

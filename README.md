@@ -122,6 +122,8 @@ CI runs clean installs, deterministic safety-boundary tests, the versioned offli
 
 The offline corpus is [evals/v1/fixtures.json](evals/v1/fixtures.json). `npm run eval:offline` runs each synthetic provider response through the real selection or schedule service with a mocked `fetch`; it fails if an expected boundary behavior changes. Gemini calls use an 8-second request/body deadline by default; `GEMINI_REQUEST_TIMEOUT_MS` accepts 100–15,000 ms, with invalid values falling back to the default. This does **not** call Gemini, measure live-model quality, validate real-time travel estimates, or prove all generated claims are grounded. See the [human-review queue](evals/v1/human-review.md) for claims outside the automated checks.
 
+For actual captured application outputs, [the local human-review format](evals/review/README.md) validates provenance fields and reports explicit verdict counts without inventing an accuracy rate. It makes no provider calls and ships with no real-output dataset or claimed model-quality result.
+
 ## API surface
 
 | Endpoint                  | Purpose                                                   |
