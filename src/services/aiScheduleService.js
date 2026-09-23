@@ -1,5 +1,6 @@
 const logger = require("../utils/logger");
 const { generatedCopyIsGrounded } = require("./aiResponseGuard");
+const { requestGeminiJson } = require("./aiProviderRequest");
 
 const DEFAULT_MODEL = "gemini-2.0-flash";
 
@@ -295,7 +296,7 @@ async function generateAiSchedule({
   };
 
   try {
-    const response = await fetch(
+    const { response, data } = await requestGeminiJson(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
@@ -314,7 +315,6 @@ async function generateAiSchedule({
       }
     );
 
-    const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error?.message || `Gemini request failed with ${response.status}`);
     }

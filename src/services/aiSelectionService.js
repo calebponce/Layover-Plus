@@ -1,4 +1,5 @@
 const logger = require("../utils/logger");
+const { requestGeminiJson } = require("./aiProviderRequest");
 
 const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 
@@ -166,7 +167,7 @@ async function generateAiSelection({
   }
 
   try {
-    const response = await fetch(
+    const { response, data } = await requestGeminiJson(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
@@ -201,7 +202,6 @@ async function generateAiSelection({
       }
     );
 
-    const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error?.message || `Gemini request failed with ${response.status}`);
     }

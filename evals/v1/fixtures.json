@@ -54,6 +54,18 @@
       "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "provider unavailable" }
     },
     {
+      "id": "schedule-provider-timeout",
+      "service": "schedule",
+      "response": { "kind": "hang" },
+      "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "timed out" }
+    },
+    {
+      "id": "schedule-body-timeout",
+      "service": "schedule",
+      "response": { "kind": "bodyHang" },
+      "expect": { "provider": "fallback", "used": false, "scheduleUnchanged": true, "errorIncludes": "timed out" }
+    },
+    {
       "id": "schedule-infeasible-skips-provider",
       "service": "schedule",
       "inputOverrides": { "feasibility": { "feasible": false, "slackMinutes": -1 } },
@@ -96,6 +108,12 @@
       "service": "selection",
       "response": { "kind": "httpError", "status": 503, "message": "provider unavailable" },
       "expect": { "provider": "fallback", "used": false, "pickedCandidateName": null, "errorIncludes": "provider unavailable" }
+    },
+    {
+      "id": "selection-provider-timeout",
+      "service": "selection",
+      "response": { "kind": "hang" },
+      "expect": { "provider": "fallback", "used": false, "pickedCandidateName": null, "errorIncludes": "timed out" }
     },
     {
       "id": "selection-no-feasible-skips-provider",

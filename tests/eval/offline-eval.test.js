@@ -26,16 +26,31 @@ function mockResponse(spec) {
   throw new Error(`Unknown response kind: ${spec.kind}`);
 }
 
+function rejectOnAbort(signal) {
+  return new Promise((_resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+  });
+}
+
 async function evaluate(fixture) {
   const input = { ...structuredClone(fixtureSet.context), ...structuredClone(fixture.inputOverrides || {}) };
   const previousFetch = global.fetch;
   const previousKey = process.env.GEMINI_API_KEY;
+  const previousTimeout = process.env.GEMINI_REQUEST_TIMEOUT_MS;
   let fetchCalls = 0;
   process.env.GEMINI_API_KEY = "offline-evaluation-fixture-key";
-  global.fetch = async () => {
+  if (["hang", "bodyHang"].includes(fixture.response.kind)) {
+    process.env.GEMINI_REQUEST_TIMEOUT_MS = "100";
+  }
+  global.fetch = async (_url, options) => {
     fetchCalls += 1;
     if (fixture.response.kind === "mustNotCall") {
       throw new Error("Provider must not be called for this fixture");
+    }
+    if (fixture.response.kind === "hang") return rejectOnAbort(options.signal);
+    if (fixture.response.kind === "bodyHang") {
+      return { ok: true, json: () => rejectOnAbort(options.signal) };
     }
     return mockResponse(fixture.response);
   };
@@ -63,6 +78,8 @@ async function evaluate(fixture) {
     global.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = previousKey;
+    if (previousTimeout === undefined) delete process.env.GEMINI_REQUEST_TIMEOUT_MS;
+    else process.env.GEMINI_REQUEST_TIMEOUT_MS = previousTimeout;
   }
 }
 
