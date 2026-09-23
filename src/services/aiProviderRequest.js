@@ -11,16 +11,21 @@ function requestTimeoutMs() {
 
 async function requestGeminiJson(url, options) {
   const timeoutMs = requestTimeoutMs();
-  const signal = AbortSignal.timeout(timeoutMs);
+  const controller = new AbortController();
+  // Keep this timer referenced: offline mocks may otherwise leave no event-loop
+  // work for Node to wait on while the request Promise is still pending.
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, { ...options, signal });
+    const response = await fetch(url, { ...options, signal: controller.signal });
     const data = await response.json();
     return { response, data };
   } catch (error) {
-    if (signal.aborted) {
+    if (controller.signal.aborted) {
       throw new Error(`Gemini request timed out after ${timeoutMs} ms.`);
     }
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
